@@ -73,9 +73,10 @@ class ViNT(BaseModel):
         )
 
     def forward(
-        self, obs_img: torch.tensor, goal_img: torch.tensor,
+        self, obs_img: torch.tensor, goal_img: torch.tensor, past_imgs: torch.tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-
+        B, H, W = obs_img.shape[0], obs_img.shape[2], obs_img.shape[3]
+        obs_img = torch.cat([past_imgs, obs_img.unsqueeze(1)], dim=1).reshape(B, -1, H, W)
         
         # get the fused observation and goal encoding
         if self.late_fusion:
@@ -124,17 +125,5 @@ class ViNT(BaseModel):
         # currently, the size is [batch_size, 32]
 
         dist_pred = self.dist_predictor(final_repr)
-        action_pred = self.action_predictor(final_repr)
-
-        # augment outputs to match labels size-wise
-        action_pred = action_pred.reshape(
-            (action_pred.shape[0], self.len_trajectory_pred, self.num_action_params)
-        )
-        action_pred[:, :, :2] = torch.cumsum(
-            action_pred[:, :, :2], dim=1
-        )  # convert position deltas into waypoints
-        if self.learn_angle:
-            action_pred[:, :, 2:] = F.normalize(
-                action_pred[:, :, 2:].clone(), dim=-1
-            )  # normalize the angle prediction
-        return dist_pred, action_pred
+        
+        return dist_pred
