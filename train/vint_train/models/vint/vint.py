@@ -126,4 +126,4 @@ class ViNT(BaseModel):
 
         dist_pred = self.dist_predictor(final_repr)
         
-        return dist_pred
+        return dist_pred.squeeze(-1)
